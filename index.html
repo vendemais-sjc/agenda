@@ -216,11 +216,33 @@
             font-size: 1.1em;
             display: inline-block;
         }
+        .teste-alerta {
+            background: #128C7E;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+            width: 100%;
+        }
+        .teste-alerta:hover {
+            background: #075E54;
+        }
         footer {
             margin-top: 20px;
             text-align: center;
             color: #aaa;
             font-size: 0.8em;
+        }
+        .mensagem-status {
+            background: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
         }
     </style>
 </head>
@@ -242,6 +264,13 @@
                 <small style="display: block; margin-top: 5px;">Todos os alertas serão enviados para este número</small>
             </div>
         </div>
+
+        <!-- Botão de teste rápido -->
+        <button class="teste-alerta" onclick="testarWhatsApp()">
+            📱 TESTAR WHATSAPP - Enviar mensagem agora
+        </button>
+
+        <div id="mensagemStatus" class="mensagem-status"></div>
 
         <form id="formCompromisso">
             <div class="form-group">
@@ -300,6 +329,7 @@
         const horaInput = document.getElementById('hora');
         const tituloInput = document.getElementById('titulo');
         const descricaoInput = document.getElementById('descricao');
+        const mensagemStatus = document.getElementById('mensagemStatus');
 
         // Configurar data mínima (hoje)
         const hoje = new Date();
@@ -307,6 +337,58 @@
         const mes = String(hoje.getMonth() + 1).padStart(2, '0');
         const dia = String(hoje.getDate()).padStart(2, '0');
         dataInput.min = `${ano}-${mes}-${dia}`;
+
+        // Função para mostrar mensagem de status
+        function mostrarStatus(mensagem, isErro = false) {
+            mensagemStatus.style.display = 'block';
+            mensagemStatus.textContent = mensagem;
+            mensagemStatus.style.background = isErro ? '#f8d7da' : '#fff3cd';
+            mensagemStatus.style.color = isErro ? '#721c24' : '#856404';
+            
+            setTimeout(() => {
+                mensagemStatus.style.display = 'none';
+            }, 5000);
+        }
+
+        // Função para testar WhatsApp
+        window.testarWhatsApp = function() {
+            const mensagemTeste = encodeURIComponent(
+                `🔔 *TESTE DE ALERTA* 🔔\n\n` +
+                `Esta é uma mensagem de teste da sua Agenda Inteligente.\n\n` +
+                `✅ Se você recebeu esta mensagem, o WhatsApp está funcionando corretamente!\n\n` +
+                `⏰ Os alertas automáticos serão enviados 24h, 2h e 1h antes dos seus compromissos.`
+            );
+            
+            const url = `https://wa.me/${WHATSAPP_FIXO}?text=${mensagemTeste}`;
+            
+            // Tenta abrir em uma nova aba
+            const novaJanela = window.open(url, '_blank');
+            
+            if (!novaJanela || novaJanela.closed || typeof novaJanela.closed == 'undefined') {
+                // Se o pop-up foi bloqueado, mostra instruções
+                mostrarStatus('⚠️ Pop-up bloqueado! Clique no link que aparecerá abaixo.', true);
+                
+                // Cria um link clicável
+                const link = document.createElement('a');
+                link.href = url;
+                link.target = '_blank';
+                link.textContent = '📱 Clique aqui para abrir o WhatsApp';
+                link.style.display = 'block';
+                link.style.padding = '10px';
+                link.style.background = '#25D366';
+                link.style.color = 'white';
+                link.style.textAlign = 'center';
+                link.style.borderRadius = '5px';
+                link.style.marginTop = '10px';
+                link.style.textDecoration = 'none';
+                
+                mensagemStatus.innerHTML = '';
+                mensagemStatus.appendChild(link);
+                mensagemStatus.style.display = 'block';
+            } else {
+                mostrarStatus('✅ WhatsApp aberto com sucesso!');
+            }
+        };
 
         // Formatar data para exibição
         function formatarData(dataStr) {
@@ -353,7 +435,31 @@
         // Abrir WhatsApp com mensagem (sempre usando o número fixo)
         function abrirWhatsApp(mensagem) {
             const url = `https://wa.me/${WHATSAPP_FIXO}?text=${mensagem}`;
-            window.open(url, '_blank');
+            
+            // Tenta abrir em uma nova aba
+            const novaJanela = window.open(url, '_blank');
+            
+            if (!novaJanela || novaJanela.closed || typeof novaJanela.closed == 'undefined') {
+                // Se o pop-up foi bloqueado, mostra um link
+                const link = document.createElement('a');
+                link.href = url;
+                link.target = '_blank';
+                link.textContent = '📱 Clique aqui para enviar a mensagem no WhatsApp';
+                link.style.display = 'block';
+                link.style.padding = '10px';
+                link.style.background = '#25D366';
+                link.style.color = 'white';
+                link.style.textAlign = 'center';
+                link.style.borderRadius = '5px';
+                link.style.marginTop = '10px';
+                link.style.textDecoration = 'none';
+                
+                mensagemStatus.innerHTML = '';
+                mensagemStatus.appendChild(link);
+                mensagemStatus.style.display = 'block';
+                
+                mostrarStatus('⚠️ Pop-up bloqueado! Use o link abaixo:', true);
+            }
         }
 
         // Renderizar lista de compromissos
@@ -486,7 +592,7 @@
                 descricao,
                 data,
                 hora,
-                whatsapp: WHATSAPP_FIXO, // Salva o número fixo
+                whatsapp: WHATSAPP_FIXO,
                 alerta24h: false,
                 alerta2h: false,
                 alerta1h: false,
@@ -503,6 +609,9 @@
             horaInput.value = '';
 
             renderizarLista();
+            
+            // Mostrar mensagem de sucesso
+            mostrarStatus('✅ Compromisso agendado com sucesso!');
             
             // Verificar se já existe alerta para este compromisso
             setTimeout(() => verificarTodosAlertas(), 1000);
