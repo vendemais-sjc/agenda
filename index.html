@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>MediAlarme Plus - Toca com Tela Bloqueada</title>
+<title>MediAlarme Plus - Bip + Vibração</title>
 
 <style>
 /* ========== CSS COMPLETO ========== */
@@ -189,7 +189,7 @@ button:active {
   width: auto;
 }
 
-/* TELA DE ALARME - ESSENCIAL PARA TELA BLOQUEADA */
+/* TELA DE ALARME */
 #alarmScreen {
   display: none;
   position: fixed;
@@ -318,10 +318,31 @@ button:active {
     padding: 15px 25px;
   }
 }
+
+/* Indicador de alarme ativo */
+.alarm-indicator {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  background: #ff4444;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  animation: blink 1s infinite;
+  display: none;
+  z-index: 1000;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
 </style>
 
 </head>
 <body>
+
+<div class="alarm-indicator" id="alarmIndicator"></div>
 
 <!-- TELA DE ALARME -->
 <div id="alarmScreen">
@@ -358,8 +379,8 @@ button:active {
   <div id="list"></div>
   
   <div class="footer">
-    <p>🔔 Toca MESMO com tela bloqueada!</p>
-    <p>🗣️ Voz automática fala o nome do remédio</p>
+    <p>🔔 Bip + Vibração contínua até você abrir a tela</p>
+    <p>🗣️ Voz só fala quando a tela é aberta</p>
   </div>
 </div>
 
@@ -376,14 +397,27 @@ button:active {
 </div>
 
 <script>
-// ========== JAVASCRIPT COMPLETO - TOCA COM TELA BLOQUEADA ==========
+// ========== MEDI ALARME PLUS - BIP + VIBRAÇÃO CONTÍNUA ==========
+// ========== Voz SÓ QUANDO ABRE A TELA ==========
 
 let alarms = [];
 let history = [];
-let activeInterval = null;
 let currentAlarmMed = '';
-let audioElement = null;
+let isAlarmActive = false;
+
+// Áudio
+let audioContext = null;
+let audioSource = null;
+let audioGain = null;
+let isPlaying = false;
+
+// Vibração
+let vibrationInterval = null;
+
+// Wake Lock
 let wakeLock = null;
+
+// TTS
 let ttsInstance = null;
 
 // ========== INICIALIZAÇÃO ==========
@@ -392,133 +426,105 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadData();
   render();
   updateAlarmCount();
-  initAudio();
   initTTS();
+  initAudio();
   startAlarmChecker();
   requestWakeLock();
+  
+  // Listener para quando a tela for aberta (visível)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && isAlarmActive) {
+      // Quando o usuário abrir a tela, fala o nome do remédio
+      speakMedicationName();
+    }
+  });
 });
 
-// ========== ÁUDIO QUE TOCA COM TELA BLOQUEADA ==========
+// ========== ÁUDIO (BIP CONTÍNUO) ==========
 function initAudio() {
-  // Criar elemento de áudio - funciona em background
-  audioElement = new Audio();
-  audioElement.loop = true;
-  audioElement.volume = 1.0;
-  
-  // Gerar som de alarme via Web Audio (beep contínuo)
-  generateAlarmSound();
-}
-
-function generateAlarmSound() {
-  // Criar um beep usando AudioContext (gerado dinamicamente)
   try {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    const audioCtx = new AudioContextClass();
-    const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-    
-    oscillator.type = 'sine';
-    oscillator.frequency.value = 880;
-    gainNode.gain.value = 0.5;
-    
-    // Gravar o som
-    const duration = 2;
-    const sampleRate = audioCtx.sampleRate;
-    const frames = duration * sampleRate;
-    const audioBuffer = audioCtx.createBuffer(1, frames, sampleRate);
-    const channelData = audioBuffer.getChannelData(0);
-    
-    for (let i = 0; i < frames; i++) {
-      channelData[i] = Math.sin(2 * Math.PI * 880 * i / sampleRate) * 0.5;
-    }
-    
-    // Converter para blob
-    const offlineCtx = new OfflineAudioContext(1, frames, sampleRate);
-    const bufferSource = offlineCtx.createBufferSource();
-    bufferSource.buffer = audioBuffer;
-    bufferSource.connect(offlineCtx.destination);
-    bufferSource.start();
-    
-    offlineCtx.startRendering().then(renderedBuffer => {
-      const wavBlob = bufferToWave(renderedBuffer, frames * 2);
-      const audioUrl = URL.createObjectURL(wavBlob);
-      audioElement.src = audioUrl;
-    });
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    audioGain = audioContext.createGain();
+    audioGain.gain.value = 0.8;
+    audioGain.connect(audioContext.destination);
   } catch(e) {
-    console.log('Erro ao gerar som, usando fallback:', e);
-    // Fallback: usar beep via oscillator ao vivo
+    console.log('Erro ao inicializar áudio:', e);
   }
 }
 
-function bufferToWave(abuffer, len) {
-  const numOfChan = abuffer.numberOfChannels;
-  const length = len * numOfChan * 2;
-  const buffer = new ArrayBuffer(44 + length);
-  const view = new DataView(buffer);
-  const channels = [];
-  let offset = 0;
-  let pos = 0;
+function startBeep() {
+  if (!audioContext || isPlaying) return;
   
-  // Write WAV header
-  setUint32(0x46464952); // "RIFF"
-  setUint32(36 + length); // file length
-  setUint32(0x45564157); // "WAVE"
-  setUint32(0x20746d66); // "fmt "
-  setUint32(16); // fmt chunk size
-  setUint16(1); // PCM
-  setUint16(numOfChan);
-  setUint32(abuffer.sampleRate);
-  setUint32(abuffer.sampleRate * 2 * numOfChan);
-  setUint16(numOfChan * 2);
-  setUint16(16);
-  setUint32(0x61746164); // "data"
-  setUint32(length);
-  
-  for (let i = 0; i < abuffer.numberOfChannels; i++)
-    channels.push(abuffer.getChannelData(i));
-  
-  while (pos < len) {
-    for (let i = 0; i < numOfChan; i++) {
-      let sample = Math.max(-1, Math.min(1, channels[i][pos]));
-      sample = (sample < 0 ? sample * 0x8000 : sample * 0x7FFF) | 0;
-      view.setInt16(44 + (offset * 2), sample, true);
-      offset++;
+  try {
+    // Reativar o AudioContext se estiver suspenso
+    if (audioContext.state === 'suspended') {
+      audioContext.resume();
     }
-    pos++;
-  }
-  
-  function setUint16(data) {
-    view.setUint16(44 + offset, data, true);
-    offset += 2;
-  }
-  
-  function setUint32(data) {
-    view.setUint32(44 + offset, data, true);
-    offset += 4;
-  }
-  
-  return new Blob([buffer], { type: 'audio/wav' });
-}
-
-// ========== WAKE LOCK - IMPEDE TELA DORMIR ==========
-async function requestWakeLock() {
-  if ('wakeLock' in navigator) {
-    try {
-      wakeLock = await navigator.wakeLock.request('screen');
-      console.log('✅ Wake Lock ativado - tela não dorme');
+    
+    // Criar oscilador para o bip
+    const oscillator = audioContext.createOscillator();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = 880; // Frequência do bip
+    
+    // Conectar
+    oscillator.connect(audioGain);
+    
+    // Iniciar
+    oscillator.start();
+    
+    // Parar após 0.5 segundos e repetir
+    const playBeep = () => {
+      if (!isAlarmActive) return;
       
-      // Recriar wake lock se a tela voltar
-      document.addEventListener('visibilitychange', async () => {
-        if (wakeLock !== null && document.visibilityState === 'visible') {
-          wakeLock = await navigator.wakeLock.request('screen');
+      const newOsc = audioContext.createOscillator();
+      newOsc.type = 'sine';
+      newOsc.frequency.value = 880;
+      newOsc.connect(audioGain);
+      newOsc.start();
+      
+      setTimeout(() => {
+        newOsc.stop();
+        if (isAlarmActive) {
+          setTimeout(playBeep, 500); // Pausa de 500ms entre bips
         }
-      });
-    } catch(e) {
-      console.log('⚠️ Wake Lock não suportado:', e);
+      }, 300);
+    };
+    
+    playBeep();
+    isPlaying = true;
+    
+  } catch(e) {
+    console.log('Erro no beep:', e);
+  }
+}
+
+function stopBeep() {
+  isPlaying = false;
+  // O áudio para naturalmente quando isAlarmActive for false
+}
+
+// ========== VIBRAÇÃO CONTÍNUA ==========
+function startVibration() {
+  if (vibrationInterval) clearInterval(vibrationInterval);
+  
+  // Vibração contínua (padrão: vibra 1s, pausa 0.5s)
+  const vibratePattern = () => {
+    if (isAlarmActive && navigator.vibrate) {
+      navigator.vibrate([1000, 500]);
     }
+  };
+  
+  vibratePattern();
+  vibrationInterval = setInterval(vibratePattern, 1500);
+}
+
+function stopVibration() {
+  if (vibrationInterval) {
+    clearInterval(vibrationInterval);
+    vibrationInterval = null;
+  }
+  if (navigator.vibrate) {
+    navigator.vibrate(0);
   }
 }
 
@@ -526,26 +532,49 @@ async function requestWakeLock() {
 function initTTS() {
   if ('speechSynthesis' in window) {
     ttsInstance = {
-      speak: (opts) => {
-        const utterance = new SpeechSynthesisUtterance(opts.text);
+      speak: (text) => {
+        const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'pt-BR';
-        utterance.rate = opts.rate || 0.9;
+        utterance.rate = 0.9;
         speechSynthesis.cancel();
         speechSynthesis.speak(utterance);
       }
     };
     console.log('✅ TTS inicializado');
-  } else {
-    ttsInstance = { speak: () => {} };
+  }
+}
+
+function speakMedicationName() {
+  if (ttsInstance && currentAlarmMed && isAlarmActive) {
+    console.log(`🗣️ Falando: Hora do remédio ${currentAlarmMed}`);
+    ttsInstance.speak(`Dona Graça, hora do remédio ${currentAlarmMed}`);
+  }
+}
+
+// ========== WAKE LOCK ==========
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      console.log('✅ Wake Lock ativado');
+      
+      document.addEventListener('visibilitychange', async () => {
+        if (wakeLock !== null && document.visibilityState === 'visible') {
+          wakeLock = await navigator.wakeLock.request('screen');
+        }
+      });
+    } catch(e) {
+      console.log('⚠️ Wake Lock não disponível');
+    }
   }
 }
 
 // ========== VERIFICADOR DE ALARMES ==========
 function startAlarmChecker() {
-  // Verificar a cada 10 segundos (mais rápido para precisão)
+  // Verificar a cada 5 segundos (mais rápido para precisão)
   setInterval(() => {
     checkAlarms();
-  }, 10000);
+  }, 5000);
   
   // Verificar também no minuto exato
   const now = new Date();
@@ -569,8 +598,8 @@ function checkAlarms() {
           triggerAlarm(alarm.med);
           localStorage.setItem(key, 'true');
           
-          // Limpar após 2 minutos
-          setTimeout(() => localStorage.removeItem(key), 120000);
+          // Limpar após 3 minutos
+          setTimeout(() => localStorage.removeItem(key), 180000);
         }
       }
     }
@@ -579,72 +608,54 @@ function checkAlarms() {
 
 // ========== DISPARAR ALARME ==========
 function triggerAlarm(medName) {
+  if (isAlarmActive) return; // Já tem alarme ativo
+  
   currentAlarmMed = medName;
+  isAlarmActive = true;
   
-  // 1. Tocar som (loop contínuo)
-  if (audioElement) {
-    audioElement.currentTime = 0;
-    audioElement.play().catch(e => console.log('Erro ao tocar:', e));
-  }
+  console.log(`🚨 ALARME ATIVO: ${medName}`);
   
-  // 2. Vibrar
-  if (navigator.vibrate) {
-    navigator.vibrate([1000, 500, 1000, 500, 2000]);
-    // Continuar vibrando a cada 3 segundos
-    const vibrateInterval = setInterval(() => {
-      if (document.getElementById('alarmScreen').style.display === 'flex') {
-        navigator.vibrate([1000, 500]);
-      } else {
-        clearInterval(vibrateInterval);
-      }
-    }, 3000);
-  }
+  // Mostrar indicador visual
+  const indicator = document.getElementById('alarmIndicator');
+  if (indicator) indicator.style.display = 'block';
   
-  // 3. Mostrar tela
+  // 1. Iniciar BIP contínuo
+  startBeep();
+  
+  // 2. Iniciar VIBRAÇÃO contínua
+  startVibration();
+  
+  // 3. Mostrar tela de alarme (mas NÃO fala ainda)
   const screen = document.getElementById('alarmScreen');
   const medElement = document.getElementById('alarmMedName');
   medElement.innerText = medName;
   screen.style.display = 'flex';
   
-  // 4. Falar
-  if (ttsInstance) {
-    ttsInstance.speak({
-      text: `Dona Graça, hora do remédio ${medName}`,
-      rate: 0.9
-    });
+  // 4. Se a tela já estiver aberta no momento do disparo, fala imediatamente
+  if (document.visibilityState === 'visible') {
+    speakMedicationName();
   }
-  
-  // 5. Repetir voz a cada 5 segundos
-  if (activeInterval) clearInterval(activeInterval);
-  activeInterval = setInterval(() => {
-    if (screen.style.display === 'flex' && ttsInstance) {
-      ttsInstance.speak({
-        text: `Dona Graça, tome o remédio ${medName}`,
-        rate: 0.9
-      });
-    }
-  }, 5000);
+  // Senão, só vai falar quando o usuário abrir a tela (via visibilitychange)
 }
 
 // ========== PARAR ALARME ==========
 function stopAlarm() {
-  // Parar som
-  if (audioElement) {
-    audioElement.pause();
-    audioElement.currentTime = 0;
-  }
+  if (!isAlarmActive) return;
+  
+  console.log(`🛑 PARANDO ALARME: ${currentAlarmMed}`);
+  
+  // Parar BIP
+  stopBeep();
+  
+  // Parar VIBRAÇÃO
+  stopVibration();
   
   // Esconder tela
   document.getElementById('alarmScreen').style.display = 'none';
   
-  // Parar voz repetida
-  if (activeInterval) {
-    clearInterval(activeInterval);
-    activeInterval = null;
-  }
-  
-  // Parar vibração
-  if (navigator.vibrate) navigator.vibrate(0);
+  // Esconder indicador
+  const indicator = document.getElementById('alarmIndicator');
+  if (indicator) indicator.style.display = 'none';
   
   // Registrar histórico
   if (currentAlarmMed) {
@@ -656,41 +667,50 @@ function stopAlarm() {
     });
     if (history.length > 100) history.pop();
     saveData();
-    currentAlarmMed = '';
   }
+  
+  // Resetar estado
+  isAlarmActive = false;
+  currentAlarmMed = '';
 }
 
 // ========== SNOOZE ==========
 function snoozeAlarm() {
-  // Parar som
-  if (audioElement) {
-    audioElement.pause();
-    audioElement.currentTime = 0;
-  }
+  if (!isAlarmActive) return;
   
+  console.log(`⏰ SNOOZE: ${currentAlarmMed} - adiado 10min`);
+  
+  // Parar BIP e VIBRAÇÃO
+  stopBeep();
+  stopVibration();
+  
+  // Esconder tela
   document.getElementById('alarmScreen').style.display = 'none';
   
-  if (activeInterval) {
-    clearInterval(activeInterval);
-    activeInterval = null;
-  }
+  // Esconder indicador
+  const indicator = document.getElementById('alarmIndicator');
+  if (indicator) indicator.style.display = 'none';
   
-  if (currentAlarmMed) {
-    history.unshift({
-      id: Date.now(),
-      med: currentAlarmMed,
-      time: new Date().toLocaleString('pt-BR'),
-      status: '⏰ Adiado 10min'
-    });
-    saveData();
-    
-    // Reagendar em 10 minutos
-    setTimeout(() => {
-      triggerAlarm(currentAlarmMed);
-    }, 600000);
-  }
+  // Registrar snooze no histórico
+  const snoozeMed = currentAlarmMed;
+  history.unshift({
+    id: Date.now(),
+    med: snoozeMed,
+    time: new Date().toLocaleString('pt-BR'),
+    status: '⏰ Adiado 10min'
+  });
+  saveData();
   
-  if (navigator.vibrate) navigator.vibrate(0);
+  // Resetar estado atual
+  isAlarmActive = false;
+  
+  // Reagendar em 10 minutos
+  setTimeout(() => {
+    console.log(`⏰ Reagendando alarme para: ${snoozeMed}`);
+    triggerAlarm(snoozeMed);
+  }, 600000); // 10 minutos
+  
+  currentAlarmMed = '';
 }
 
 // ========== CRUD ALARMES ==========
@@ -722,6 +742,9 @@ function addAlarm() {
   for(let i = 1; i <= 3; i++) {
     document.getElementById(`time${i}`).value = '';
   }
+  
+  // Feedback
+  if (navigator.vibrate) navigator.vibrate(100);
 }
 
 function removeAlarm(id) {
@@ -788,15 +811,15 @@ function clearHistory() {
 
 // ========== UTILIDADES ==========
 function loadData() {
-  const savedAlarms = localStorage.getItem('alarms_plus_v2');
-  const savedHistory = localStorage.getItem('history_plus_v2');
+  const savedAlarms = localStorage.getItem('alarms_plus_final');
+  const savedHistory = localStorage.getItem('history_plus_final');
   alarms = savedAlarms ? JSON.parse(savedAlarms) : [];
   history = savedHistory ? JSON.parse(savedHistory) : [];
 }
 
 function saveData() {
-  localStorage.setItem('alarms_plus_v2', JSON.stringify(alarms));
-  localStorage.setItem('history_plus_v2', JSON.stringify(history));
+  localStorage.setItem('alarms_plus_final', JSON.stringify(alarms));
+  localStorage.setItem('history_plus_final', JSON.stringify(history));
 }
 
 function escapeHtml(text) {
@@ -807,10 +830,10 @@ function escapeHtml(text) {
 
 // ========== TESTE MANUAL ==========
 function testAlarm() {
-  triggerAlarm('TESTE - Hora do remédio');
+  triggerAlarm('TESTE - Paracetamol');
 }
 
-// Expor funções
+// ========== EXPORTAR FUNÇÕES GLOBAIS ==========
 window.addAlarm = addAlarm;
 window.removeAlarm = removeAlarm;
 window.stopAlarm = stopAlarm;
@@ -820,8 +843,10 @@ window.closeHistory = closeHistory;
 window.clearHistory = clearHistory;
 window.testAlarm = testAlarm;
 
-console.log('✅ App pronto! Use testAlarm() para testar');
-console.log('🎵 O som vai tocar mesmo com tela bloqueada!');
+console.log('✅ App pronto!');
+console.log('🎯 BIP + VIBRAÇÃO contínua até abrir a tela');
+console.log('🗣️ Voz só fala quando a tela é aberta');
+console.log('🧪 Teste: digite testAlarm() no console');
 </script>
 
 </body>
