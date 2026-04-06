@@ -1,628 +1,828 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Agenda Inteligente - WhatsApp Integrado</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-        }
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            padding: 30px;
-            max-width: 600px;
-            width: 100%;
-        }
-        h1 {
-            color: #333;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        h1 img {
-            width: 40px;
-            height: 40px;
-        }
-        .subtitle {
-            color: #666;
-            margin-bottom: 25px;
-            font-size: 0.95em;
-            border-left: 4px solid #25D366;
-            padding-left: 15px;
-            background: #f5f5f5;
-            border-radius: 0 8px 8px 0;
-            line-height: 1.4;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #444;
-            font-size: 0.95em;
-        }
-        input, textarea, select {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 1em;
-            transition: border 0.3s;
-        }
-        input:focus, textarea:focus, select:focus {
-            outline: none;
-            border-color: #25D366;
-        }
-        .row {
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-        .row .form-group {
-            flex: 1 1 200px;
-        }
-        button {
-            background: #25D366;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 1.1em;
-            font-weight: bold;
-            border-radius: 50px;
-            cursor: pointer;
-            width: 100%;
-            transition: transform 0.2s, background 0.3s;
-            margin-top: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-        button:hover {
-            background: #128C7E;
-            transform: scale(1.02);
-        }
-        .compromissos-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin: 30px 0 15px;
-        }
-        .compromissos-header h2 {
-            color: #333;
-            font-size: 1.4em;
-        }
-        .badge {
-            background: #25D366;
-            color: white;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.9em;
-        }
-        .lista-compromissos {
-            list-style: none;
-            max-height: 400px;
-            overflow-y: auto;
-            border-radius: 10px;
-            background: #f9f9f9;
-            padding: 5px;
-        }
-        .compromisso-item {
-            background: white;
-            margin: 10px 0;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            border-left: 5px solid #25D366;
-            transition: all 0.2s;
-            position: relative;
-        }
-        .compromisso-item.alerta {
-            border-left-color: #ff4444;
-            background: #fff5f5;
-        }
-        .compromisso-item .titulo {
-            font-weight: bold;
-            font-size: 1.1em;
-            color: #333;
-            padding-right: 60px;
-        }
-        .compromisso-item .descricao {
-            color: #666;
-            font-size: 0.9em;
-            margin: 5px 0;
-        }
-        .compromisso-item .data-hora {
-            color: #25D366;
-            font-size: 0.85em;
-            font-weight: 600;
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-        .compromisso-item .alertas {
-            margin-top: 8px;
-            font-size: 0.8em;
-            color: #ff4444;
-            background: #ffeeee;
-            padding: 4px 8px;
-            border-radius: 20px;
-            display: inline-block;
-        }
-        .btn-remover {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: #ff4444;
-            color: white;
-            border: none;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2em;
-        }
-        .btn-remover:hover {
-            background: #cc0000;
-        }
-        .vazio {
-            text-align: center;
-            color: #999;
-            padding: 30px;
-            font-style: italic;
-        }
-        .whatsapp-hint {
-            background: #e8f5e9;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 15px 0;
-            font-size: 0.95em;
-            color: #2e7d32;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            border: 2px solid #25D366;
-        }
-        .whatsapp-hint i {
-            font-size: 2em;
-        }
-        .numero-fixo {
-            background: #25D366;
-            color: white;
-            padding: 8px 15px;
-            border-radius: 50px;
-            font-weight: bold;
-            font-size: 1.1em;
-            display: inline-block;
-        }
-        .teste-alerta {
-            background: #128C7E;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 50px;
-            cursor: pointer;
-            font-weight: bold;
-            margin-top: 10px;
-            width: 100%;
-        }
-        .teste-alerta:hover {
-            background: #075E54;
-        }
-        footer {
-            margin-top: 20px;
-            text-align: center;
-            color: #aaa;
-            font-size: 0.8em;
-        }
-        .mensagem-status {
-            background: #fff3cd;
-            color: #856404;
-            padding: 10px;
-            border-radius: 5px;
-            margin: 10px 0;
-            display: none;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>MediAlarme Plus - Toca com Tela Bloqueada</title>
+
+<style>
+/* ========== CSS COMPLETO ========== */
+* {
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+  --primary: #667eea;
+  --primary-dark: #764ba2;
+  --success: #22c55e;
+  --danger: #dc2626;
+  --warning: #f59e0b;
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  color: white;
+  margin: 0;
+  min-height: 100vh;
+}
+
+.container {
+  max-width: 600px;
+  margin: auto;
+  padding: 20px;
+  padding-bottom: 80px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+
+.btn-history {
+  background: rgba(255,255,255,0.2);
+  padding: 10px 18px;
+  font-size: 14px;
+  width: auto;
+  border-radius: 40px;
+  backdrop-filter: blur(5px);
+  border: none;
+  color: white;
+  cursor: pointer;
+}
+
+.card {
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(10px);
+  border-radius: 28px;
+  padding: 20px;
+  margin-bottom: 25px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+}
+
+.card h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+input, button {
+  width: 100%;
+  padding: 16px;
+  margin-top: 12px;
+  border-radius: 20px;
+  border: none;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+input {
+  background: white;
+  text-align: center;
+  color: #1f2937;
+}
+
+input:focus {
+  outline: none;
+  transform: scale(1.02);
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+}
+
+.multi-time {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.multi-time input {
+  flex: 1;
+  padding: 12px;
+  font-size: 14px;
+  min-width: 80px;
+}
+
+button {
+  background: var(--success);
+  color: white;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+.btn-add {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  font-size: 18px;
+  margin-top: 20px;
+}
+
+.section-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px 0 10px;
+}
+
+.badge {
+  background: rgba(255,255,255,0.3);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+#list > div {
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(5px);
+  padding: 16px;
+  border-radius: 20px;
+  margin-top: 12px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.alarm-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.alarm-info {
+  flex: 1;
+}
+
+.alarm-info strong {
+  font-size: 18px;
+  display: block;
+}
+
+.alarm-times {
+  font-size: 13px;
+  opacity: 0.9;
+  margin-top: 5px;
+}
+
+.delete {
+  background: var(--danger);
+  padding: 8px 18px;
+  border-radius: 40px;
+  font-size: 14px;
+  width: auto;
+}
+
+/* TELA DE ALARME - ESSENCIAL PARA TELA BLOQUEADA */
+#alarmScreen {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  z-index: 9999;
+  text-align: center;
+  animation: pulse 0.8s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.95; background: linear-gradient(135deg, #ee5a24, #ff6b6b); }
+}
+
+#alarmScreen h1 {
+  font-size: 42px;
+  margin-bottom: 20px;
+}
+
+.med-name {
+  font-size: 48px;
+  font-weight: bold;
+  background: white;
+  color: black;
+  padding: 25px 40px;
+  border-radius: 80px;
+  margin: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.alarm-buttons {
+  display: flex;
+  gap: 20px;
+  margin-top: 40px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn-tomado, .btn-snooze {
+  font-size: 24px;
+  padding: 15px 35px;
+  width: auto;
+}
+
+.btn-tomado { background: var(--success); }
+.btn-snooze { background: var(--warning); }
+
+/* MODAL */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 10000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  background: white;
+  color: black;
+  margin: 15% auto;
+  width: 90%;
+  max-width: 500px;
+  border-radius: 32px;
+  max-height: 70%;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.close {
+  font-size: 32px;
+  cursor: pointer;
+  color: #999;
+}
+
+.history-item {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  margin: 8px;
+  background: #f9f9f9;
+  border-radius: 12px;
+}
+
+.btn-clear {
+  background: var(--danger);
+  margin: 20px;
+  width: calc(100% - 40px);
+}
+
+.footer {
+  text-align: center;
+  margin-top: 30px;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 20px;
+  margin-top: 20px;
+}
+
+@media (max-width: 480px) {
+  .btn-tomado, .btn-snooze {
+    font-size: 18px;
+    padding: 12px 25px;
+  }
+  .med-name {
+    font-size: 32px;
+    padding: 15px 25px;
+  }
+}
+</style>
+
 </head>
 <body>
-    <div class="container">
-        <h1>
-            <img src="https://img.icons8.com/color/48/000000/whatsapp--v1.png" alt="WhatsApp">
-            Agenda com Alerta WhatsApp
-        </h1>
-        <div class="subtitle">
-            ⏰ Seus compromissos te avisam automaticamente 24h, 2h e 1h antes via WhatsApp
-        </div>
 
-        <div class="whatsapp-hint">
-            <span>📱</span>
-            <div>
-                <strong>WhatsApp configurado:</strong> 
-                <div class="numero-fixo">+55 12 98846-1978</div>
-                <small style="display: block; margin-top: 5px;">Todos os alertas serão enviados para este número</small>
-            </div>
-        </div>
+<!-- TELA DE ALARME -->
+<div id="alarmScreen">
+  <h1>⏰ HORA DO REMÉDIO</h1>
+  <div id="alarmMedName" class="med-name"></div>
+  <div class="alarm-buttons">
+    <button class="btn-tomado" onclick="stopAlarm()">✅ TOMADO</button>
+    <button class="btn-snooze" onclick="snoozeAlarm()">⏰ ADIAR 10min</button>
+  </div>
+</div>
 
-        <!-- Botão de teste rápido -->
-        <button class="teste-alerta" onclick="testarWhatsApp()">
-            📱 TESTAR WHATSAPP - Enviar mensagem agora
-        </button>
+<!-- APP PRINCIPAL -->
+<div class="container">
+  <div class="header">
+    <h1>💊 MediAlarme Plus</h1>
+    <button class="btn-history" onclick="showHistory()">📋 Histórico</button>
+  </div>
 
-        <div id="mensagemStatus" class="mensagem-status"></div>
-
-        <form id="formCompromisso">
-            <div class="form-group">
-                <label>Título do Compromisso *</label>
-                <input type="text" id="titulo" placeholder="Ex: Reunião com cliente" required>
-            </div>
-            <div class="form-group">
-                <label>Descrição (opcional)</label>
-                <textarea id="descricao" rows="2" placeholder="Detalhes importantes..."></textarea>
-            </div>
-            <div class="row">
-                <div class="form-group">
-                    <label>Data *</label>
-                    <input type="date" id="data" required>
-                </div>
-                <div class="form-group">
-                    <label>Hora *</label>
-                    <input type="time" id="hora" required>
-                </div>
-            </div>
-            
-            <!-- Campo WhatsApp oculto com o número fixo -->
-            <input type="hidden" id="whatsapp" value="5512988461978">
-            
-            <button type="submit">
-                <span>➕</span> Agendar Compromisso
-            </button>
-        </form>
-
-        <div class="compromissos-header">
-            <h2>📅 Próximos Compromissos</h2>
-            <span class="badge" id="contador">0</span>
-        </div>
-
-        <ul class="lista-compromissos" id="listaCompromissos">
-            <li class="vazio">Nenhum compromisso agendado ainda.</li>
-        </ul>
-
-        <footer>
-            ⏱️ Alertas automáticos: 24h, 2h e 1h antes do evento • WhatsApp: 12 98846-1978
-        </footer>
+  <div class="card">
+    <h3>➕ Novo medicamento</h3>
+    <input type="text" id="med" placeholder="Nome do medicamento" autocomplete="off">
+    <div class="multi-time">
+      <input type="time" id="time1">
+      <input type="time" id="time2">
+      <input type="time" id="time3">
     </div>
+    <button class="btn-add" onclick="addAlarm()">➕ Adicionar</button>
+  </div>
 
-    <script>
-        // Número fixo do WhatsApp (formatado: 55 + DDD + número)
-        const WHATSAPP_FIXO = '5512988461978';
-        
-        // Carregar compromissos salvos
-        let compromissos = JSON.parse(localStorage.getItem('compromissos')) || [];
+  <div class="section-title">
+    <h3>📋 Seus lembretes</h3>
+    <span class="badge" id="alarmCount">0</span>
+  </div>
+  <div id="list"></div>
+  
+  <div class="footer">
+    <p>🔔 Toca MESMO com tela bloqueada!</p>
+    <p>🗣️ Voz automática fala o nome do remédio</p>
+  </div>
+</div>
 
-        // Elementos do DOM
-        const form = document.getElementById('formCompromisso');
-        const lista = document.getElementById('listaCompromissos');
-        const contador = document.getElementById('contador');
-        const dataInput = document.getElementById('data');
-        const horaInput = document.getElementById('hora');
-        const tituloInput = document.getElementById('titulo');
-        const descricaoInput = document.getElementById('descricao');
-        const mensagemStatus = document.getElementById('mensagemStatus');
+<!-- MODAL HISTÓRICO -->
+<div id="historyModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>📊 Histórico</h2>
+      <span class="close" onclick="closeHistory()">&times;</span>
+    </div>
+    <div id="historyList"></div>
+    <button class="btn-clear" onclick="clearHistory()">🗑️ Limpar</button>
+  </div>
+</div>
 
-        // Configurar data mínima (hoje)
-        const hoje = new Date();
-        const ano = hoje.getFullYear();
-        const mes = String(hoje.getMonth() + 1).padStart(2, '0');
-        const dia = String(hoje.getDate()).padStart(2, '0');
-        dataInput.min = `${ano}-${mes}-${dia}`;
+<script>
+// ========== JAVASCRIPT COMPLETO - TOCA COM TELA BLOQUEADA ==========
 
-        // Função para mostrar mensagem de status
-        function mostrarStatus(mensagem, isErro = false) {
-            mensagemStatus.style.display = 'block';
-            mensagemStatus.textContent = mensagem;
-            mensagemStatus.style.background = isErro ? '#f8d7da' : '#fff3cd';
-            mensagemStatus.style.color = isErro ? '#721c24' : '#856404';
-            
-            setTimeout(() => {
-                mensagemStatus.style.display = 'none';
-            }, 5000);
+let alarms = [];
+let history = [];
+let activeInterval = null;
+let currentAlarmMed = '';
+let audioElement = null;
+let wakeLock = null;
+let ttsInstance = null;
+
+// ========== INICIALIZAÇÃO ==========
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('📱 MediAlarme Plus - Iniciado');
+  loadData();
+  render();
+  updateAlarmCount();
+  initAudio();
+  initTTS();
+  startAlarmChecker();
+  requestWakeLock();
+});
+
+// ========== ÁUDIO QUE TOCA COM TELA BLOQUEADA ==========
+function initAudio() {
+  // Criar elemento de áudio - funciona em background
+  audioElement = new Audio();
+  audioElement.loop = true;
+  audioElement.volume = 1.0;
+  
+  // Gerar som de alarme via Web Audio (beep contínuo)
+  generateAlarmSound();
+}
+
+function generateAlarmSound() {
+  // Criar um beep usando AudioContext (gerado dinamicamente)
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioContextClass();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    oscillator.type = 'sine';
+    oscillator.frequency.value = 880;
+    gainNode.gain.value = 0.5;
+    
+    // Gravar o som
+    const duration = 2;
+    const sampleRate = audioCtx.sampleRate;
+    const frames = duration * sampleRate;
+    const audioBuffer = audioCtx.createBuffer(1, frames, sampleRate);
+    const channelData = audioBuffer.getChannelData(0);
+    
+    for (let i = 0; i < frames; i++) {
+      channelData[i] = Math.sin(2 * Math.PI * 880 * i / sampleRate) * 0.5;
+    }
+    
+    // Converter para blob
+    const offlineCtx = new OfflineAudioContext(1, frames, sampleRate);
+    const bufferSource = offlineCtx.createBufferSource();
+    bufferSource.buffer = audioBuffer;
+    bufferSource.connect(offlineCtx.destination);
+    bufferSource.start();
+    
+    offlineCtx.startRendering().then(renderedBuffer => {
+      const wavBlob = bufferToWave(renderedBuffer, frames * 2);
+      const audioUrl = URL.createObjectURL(wavBlob);
+      audioElement.src = audioUrl;
+    });
+  } catch(e) {
+    console.log('Erro ao gerar som, usando fallback:', e);
+    // Fallback: usar beep via oscillator ao vivo
+  }
+}
+
+function bufferToWave(abuffer, len) {
+  const numOfChan = abuffer.numberOfChannels;
+  const length = len * numOfChan * 2;
+  const buffer = new ArrayBuffer(44 + length);
+  const view = new DataView(buffer);
+  const channels = [];
+  let offset = 0;
+  let pos = 0;
+  
+  // Write WAV header
+  setUint32(0x46464952); // "RIFF"
+  setUint32(36 + length); // file length
+  setUint32(0x45564157); // "WAVE"
+  setUint32(0x20746d66); // "fmt "
+  setUint32(16); // fmt chunk size
+  setUint16(1); // PCM
+  setUint16(numOfChan);
+  setUint32(abuffer.sampleRate);
+  setUint32(abuffer.sampleRate * 2 * numOfChan);
+  setUint16(numOfChan * 2);
+  setUint16(16);
+  setUint32(0x61746164); // "data"
+  setUint32(length);
+  
+  for (let i = 0; i < abuffer.numberOfChannels; i++)
+    channels.push(abuffer.getChannelData(i));
+  
+  while (pos < len) {
+    for (let i = 0; i < numOfChan; i++) {
+      let sample = Math.max(-1, Math.min(1, channels[i][pos]));
+      sample = (sample < 0 ? sample * 0x8000 : sample * 0x7FFF) | 0;
+      view.setInt16(44 + (offset * 2), sample, true);
+      offset++;
+    }
+    pos++;
+  }
+  
+  function setUint16(data) {
+    view.setUint16(44 + offset, data, true);
+    offset += 2;
+  }
+  
+  function setUint32(data) {
+    view.setUint32(44 + offset, data, true);
+    offset += 4;
+  }
+  
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
+// ========== WAKE LOCK - IMPEDE TELA DORMIR ==========
+async function requestWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      console.log('✅ Wake Lock ativado - tela não dorme');
+      
+      // Recriar wake lock se a tela voltar
+      document.addEventListener('visibilitychange', async () => {
+        if (wakeLock !== null && document.visibilityState === 'visible') {
+          wakeLock = await navigator.wakeLock.request('screen');
         }
+      });
+    } catch(e) {
+      console.log('⚠️ Wake Lock não suportado:', e);
+    }
+  }
+}
 
-        // Função para testar WhatsApp
-        window.testarWhatsApp = function() {
-            const mensagemTeste = encodeURIComponent(
-                `🔔 *TESTE DE ALERTA* 🔔\n\n` +
-                `Esta é uma mensagem de teste da sua Agenda Inteligente.\n\n` +
-                `✅ Se você recebeu esta mensagem, o WhatsApp está funcionando corretamente!\n\n` +
-                `⏰ Os alertas automáticos serão enviados 24h, 2h e 1h antes dos seus compromissos.`
-            );
-            
-            const url = `https://wa.me/${WHATSAPP_FIXO}?text=${mensagemTeste}`;
-            
-            // Tenta abrir em uma nova aba
-            const novaJanela = window.open(url, '_blank');
-            
-            if (!novaJanela || novaJanela.closed || typeof novaJanela.closed == 'undefined') {
-                // Se o pop-up foi bloqueado, mostra instruções
-                mostrarStatus('⚠️ Pop-up bloqueado! Clique no link que aparecerá abaixo.', true);
-                
-                // Cria um link clicável
-                const link = document.createElement('a');
-                link.href = url;
-                link.target = '_blank';
-                link.textContent = '📱 Clique aqui para abrir o WhatsApp';
-                link.style.display = 'block';
-                link.style.padding = '10px';
-                link.style.background = '#25D366';
-                link.style.color = 'white';
-                link.style.textAlign = 'center';
-                link.style.borderRadius = '5px';
-                link.style.marginTop = '10px';
-                link.style.textDecoration = 'none';
-                
-                mensagemStatus.innerHTML = '';
-                mensagemStatus.appendChild(link);
-                mensagemStatus.style.display = 'block';
-            } else {
-                mostrarStatus('✅ WhatsApp aberto com sucesso!');
-            }
-        };
+// ========== TTS (VOZ) ==========
+function initTTS() {
+  if ('speechSynthesis' in window) {
+    ttsInstance = {
+      speak: (opts) => {
+        const utterance = new SpeechSynthesisUtterance(opts.text);
+        utterance.lang = 'pt-BR';
+        utterance.rate = opts.rate || 0.9;
+        speechSynthesis.cancel();
+        speechSynthesis.speak(utterance);
+      }
+    };
+    console.log('✅ TTS inicializado');
+  } else {
+    ttsInstance = { speak: () => {} };
+  }
+}
 
-        // Formatar data para exibição
-        function formatarData(dataStr) {
-            const [ano, mes, dia] = dataStr.split('-');
-            return `${dia}/${mes}/${ano}`;
+// ========== VERIFICADOR DE ALARMES ==========
+function startAlarmChecker() {
+  // Verificar a cada 10 segundos (mais rápido para precisão)
+  setInterval(() => {
+    checkAlarms();
+  }, 10000);
+  
+  // Verificar também no minuto exato
+  const now = new Date();
+  const msToNextMinute = (60 - now.getSeconds()) * 1000;
+  setTimeout(() => {
+    checkAlarms();
+    setInterval(() => checkAlarms(), 60000);
+  }, msToNextMinute);
+}
+
+function checkAlarms() {
+  const now = new Date();
+  const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  
+  for (let alarm of alarms) {
+    for (let time of alarm.times) {
+      if (time === currentTime) {
+        const key = `notified_${alarm.id}_${time}_${now.toDateString()}`;
+        if (!localStorage.getItem(key)) {
+          console.log(`🔔 ALARME DISPARADO: ${alarm.med} às ${time}`);
+          triggerAlarm(alarm.med);
+          localStorage.setItem(key, 'true');
+          
+          // Limpar após 2 minutos
+          setTimeout(() => localStorage.removeItem(key), 120000);
         }
+      }
+    }
+  }
+}
 
-        // Verificar alertas e retornar quais estão ativos
-        function verificarAlertas(dataHoraCompromisso) {
-            const agora = new Date();
-            const compromissoDate = new Date(dataHoraCompromisso);
-            const diffMs = compromissoDate - agora;
-            const diffHoras = diffMs / (1000 * 60 * 60);
-            
-            const alertas = [];
-            if (diffHoras <= 24 && diffHoras > 23.9) alertas.push('⏰ 24h');
-            if (diffHoras <= 2 && diffHoras > 1.9) alertas.push('⏰ 2h');
-            if (diffHoras <= 1 && diffHoras > 0.9) alertas.push('⏰ 1h');
-            if (diffHoras <= 0.1 && diffHoras > 0) alertas.push('🔔 Já está acontecendo!');
-            
-            return alertas;
-        }
+// ========== DISPARAR ALARME ==========
+function triggerAlarm(medName) {
+  currentAlarmMed = medName;
+  
+  // 1. Tocar som (loop contínuo)
+  if (audioElement) {
+    audioElement.currentTime = 0;
+    audioElement.play().catch(e => console.log('Erro ao tocar:', e));
+  }
+  
+  // 2. Vibrar
+  if (navigator.vibrate) {
+    navigator.vibrate([1000, 500, 1000, 500, 2000]);
+    // Continuar vibrando a cada 3 segundos
+    const vibrateInterval = setInterval(() => {
+      if (document.getElementById('alarmScreen').style.display === 'flex') {
+        navigator.vibrate([1000, 500]);
+      } else {
+        clearInterval(vibrateInterval);
+      }
+    }, 3000);
+  }
+  
+  // 3. Mostrar tela
+  const screen = document.getElementById('alarmScreen');
+  const medElement = document.getElementById('alarmMedName');
+  medElement.innerText = medName;
+  screen.style.display = 'flex';
+  
+  // 4. Falar
+  if (ttsInstance) {
+    ttsInstance.speak({
+      text: `Dona Graça, hora do remédio ${medName}`,
+      rate: 0.9
+    });
+  }
+  
+  // 5. Repetir voz a cada 5 segundos
+  if (activeInterval) clearInterval(activeInterval);
+  activeInterval = setInterval(() => {
+    if (screen.style.display === 'flex' && ttsInstance) {
+      ttsInstance.speak({
+        text: `Dona Graça, tome o remédio ${medName}`,
+        rate: 0.9
+      });
+    }
+  }, 5000);
+}
 
-        // Gerar mensagem para WhatsApp
-        function gerarMensagemWhatsApp(compromisso, tipoAlerta) {
-            const dataFormatada = formatarData(compromisso.data);
-            const titulo = compromisso.titulo;
-            const descricao = compromisso.descricao || 'Sem descrição';
-            
-            let mensagem = '';
-            if (tipoAlerta === '24h') {
-                mensagem = `🔔 *LEMBRETE: FALTA 24 HORAS* 🔔\n\nCompromisso: ${titulo}\nData: ${dataFormatada}\nHora: ${compromisso.hora}\nDescrição: ${descricao}\n\nVocê tem 24 horas até este evento. Já se prepare!`;
-            } else if (tipoAlerta === '2h') {
-                mensagem = `⚠️ *ALERTA: FALTAM 2 HORAS* ⚠️\n\nCompromisso: ${titulo}\nData: ${dataFormatada}\nHora: ${compromisso.hora}\nDescrição: ${descricao}\n\nFaltam apenas 2 horas!`;
-            } else if (tipoAlerta === '1h') {
-                mensagem = `🚨 *ÚLTIMA HORA: FALTA 1 HORA* 🚨\n\nCompromisso: ${titulo}\nData: ${dataFormatada}\nHora: ${compromisso.hora}\nDescrição: ${descricao}\n\nCorre, falta 1 hora!`;
-            } else {
-                mensagem = `📅 *COMPROMISSO AGENDADO* 📅\n\nTítulo: ${titulo}\nData: ${dataFormatada}\nHora: ${compromisso.hora}\nDescrição: ${descricao}`;
-            }
-            
-            return encodeURIComponent(mensagem);
-        }
+// ========== PARAR ALARME ==========
+function stopAlarm() {
+  // Parar som
+  if (audioElement) {
+    audioElement.pause();
+    audioElement.currentTime = 0;
+  }
+  
+  // Esconder tela
+  document.getElementById('alarmScreen').style.display = 'none';
+  
+  // Parar voz repetida
+  if (activeInterval) {
+    clearInterval(activeInterval);
+    activeInterval = null;
+  }
+  
+  // Parar vibração
+  if (navigator.vibrate) navigator.vibrate(0);
+  
+  // Registrar histórico
+  if (currentAlarmMed) {
+    history.unshift({
+      id: Date.now(),
+      med: currentAlarmMed,
+      time: new Date().toLocaleString('pt-BR'),
+      status: '✅ Tomado'
+    });
+    if (history.length > 100) history.pop();
+    saveData();
+    currentAlarmMed = '';
+  }
+}
 
-        // Abrir WhatsApp com mensagem (sempre usando o número fixo)
-        function abrirWhatsApp(mensagem) {
-            const url = `https://wa.me/${WHATSAPP_FIXO}?text=${mensagem}`;
-            
-            // Tenta abrir em uma nova aba
-            const novaJanela = window.open(url, '_blank');
-            
-            if (!novaJanela || novaJanela.closed || typeof novaJanela.closed == 'undefined') {
-                // Se o pop-up foi bloqueado, mostra um link
-                const link = document.createElement('a');
-                link.href = url;
-                link.target = '_blank';
-                link.textContent = '📱 Clique aqui para enviar a mensagem no WhatsApp';
-                link.style.display = 'block';
-                link.style.padding = '10px';
-                link.style.background = '#25D366';
-                link.style.color = 'white';
-                link.style.textAlign = 'center';
-                link.style.borderRadius = '5px';
-                link.style.marginTop = '10px';
-                link.style.textDecoration = 'none';
-                
-                mensagemStatus.innerHTML = '';
-                mensagemStatus.appendChild(link);
-                mensagemStatus.style.display = 'block';
-                
-                mostrarStatus('⚠️ Pop-up bloqueado! Use o link abaixo:', true);
-            }
-        }
+// ========== SNOOZE ==========
+function snoozeAlarm() {
+  // Parar som
+  if (audioElement) {
+    audioElement.pause();
+    audioElement.currentTime = 0;
+  }
+  
+  document.getElementById('alarmScreen').style.display = 'none';
+  
+  if (activeInterval) {
+    clearInterval(activeInterval);
+    activeInterval = null;
+  }
+  
+  if (currentAlarmMed) {
+    history.unshift({
+      id: Date.now(),
+      med: currentAlarmMed,
+      time: new Date().toLocaleString('pt-BR'),
+      status: '⏰ Adiado 10min'
+    });
+    saveData();
+    
+    // Reagendar em 10 minutos
+    setTimeout(() => {
+      triggerAlarm(currentAlarmMed);
+    }, 600000);
+  }
+  
+  if (navigator.vibrate) navigator.vibrate(0);
+}
 
-        // Renderizar lista de compromissos
-        function renderizarLista() {
-            if (compromissos.length === 0) {
-                lista.innerHTML = '<li class="vazio">Nenhum compromisso agendado ainda.</li>';
-                contador.textContent = '0';
-                return;
-            }
+// ========== CRUD ALARMES ==========
+function addAlarm() {
+  const med = document.getElementById('med').value.trim();
+  const times = [];
+  for(let i = 1; i <= 3; i++) {
+    const time = document.getElementById(`time${i}`).value;
+    if(time) times.push(time);
+  }
+  
+  if(!med || times.length === 0) {
+    alert('⚠️ Preencha o medicamento e pelo menos 1 horário');
+    return;
+  }
+  
+  alarms.push({
+    id: Date.now(),
+    med: med,
+    times: times
+  });
+  
+  saveData();
+  render();
+  updateAlarmCount();
+  
+  // Limpar campos
+  document.getElementById('med').value = '';
+  for(let i = 1; i <= 3; i++) {
+    document.getElementById(`time${i}`).value = '';
+  }
+}
 
-            // Ordenar por data/hora (mais próximo primeiro)
-            compromissos.sort((a, b) => {
-                const dataA = new Date(`${a.data}T${a.hora}`);
-                const dataB = new Date(`${b.data}T${b.hora}`);
-                return dataA - dataB;
-            });
+function removeAlarm(id) {
+  if (!confirm('Remover este lembrete?')) return;
+  alarms = alarms.filter(a => a.id !== id);
+  saveData();
+  render();
+  updateAlarmCount();
+}
 
-            let html = '';
-            compromissos.forEach((comp, index) => {
-                const dataHoraStr = `${comp.data}T${comp.hora}`;
-                const alertasAtivos = verificarAlertas(dataHoraStr);
-                const temAlerta = alertasAtivos.length > 0;
-                
-                html += `
-                    <li class="compromisso-item ${temAlerta ? 'alerta' : ''}" data-index="${index}">
-                        <button class="btn-remover" onclick="removerCompromisso(${index})" title="Remover compromisso">×</button>
-                        <div class="titulo">${comp.titulo}</div>
-                        ${comp.descricao ? `<div class="descricao">${comp.descricao}</div>` : ''}
-                        <div class="data-hora">
-                            <span>📅 ${formatarData(comp.data)}</span>
-                            <span>⏰ ${comp.hora}</span>
-                        </div>
-                        ${temAlerta ? `<div class="alertas">🔔 Alerta agora: ${alertasAtivos.join(', ')}</div>` : ''}
-                        <div style="margin-top: 10px; display: flex; gap: 5px; flex-wrap: wrap;">
-                            <button onclick="enviarAlertaManual(${index}, '24h')" style="background: #25D366; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 0.8em; cursor: pointer;">⏰ 24h</button>
-                            <button onclick="enviarAlertaManual(${index}, '2h')" style="background: #25D366; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 0.8em; cursor: pointer;">⏰ 2h</button>
-                            <button onclick="enviarAlertaManual(${index}, '1h')" style="background: #25D366; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 0.8em; cursor: pointer;">⏰ 1h</button>
-                            <button onclick="enviarDetalhes(${index})" style="background: #128C7E; color: white; border: none; padding: 5px 10px; border-radius: 5px; font-size: 0.8em; cursor: pointer;">📲 Detalhes</button>
-                        </div>
-                    </li>
-                `;
-            });
+function render() {
+  const listDiv = document.getElementById('list');
+  if(alarms.length === 0) {
+    listDiv.innerHTML = '<div class="empty-state">✨ Nenhum lembrete cadastrado</div>';
+    return;
+  }
+  
+  listDiv.innerHTML = alarms.map(a => `
+    <div>
+      <div class="alarm-item">
+        <div class="alarm-info">
+          <strong>💊 ${escapeHtml(a.med)}</strong>
+          <div class="alarm-times">⏰ ${a.times.join(' • ')}</div>
+        </div>
+        <button class="delete" onclick="removeAlarm(${a.id})">❌</button>
+      </div>
+    </div>
+  `).join('');
+}
 
-            lista.innerHTML = html;
-            contador.textContent = compromissos.length;
-        }
+function updateAlarmCount() {
+  document.getElementById('alarmCount').textContent = alarms.length;
+}
 
-        // Verificar todos os compromissos e disparar alertas se necessário
-        function verificarTodosAlertas() {
-            const agora = new Date();
-            let precisaRenderizar = false;
-            
-            compromissos.forEach((comp, index) => {
-                const dataHoraComp = new Date(`${comp.data}T${comp.hora}`);
-                const diffMs = dataHoraComp - agora;
-                const diffHoras = diffMs / (1000 * 60 * 60);
-                
-                // Evita alertas repetidos (simples controle)
-                if (diffHoras <= 24 && diffHoras > 23.9 && !comp.alerta24h) {
-                    enviarAlertaManual(index, '24h');
-                    comp.alerta24h = true;
-                    precisaRenderizar = true;
-                }
-                if (diffHoras <= 2 && diffHoras > 1.9 && !comp.alerta2h) {
-                    enviarAlertaManual(index, '2h');
-                    comp.alerta2h = true;
-                    precisaRenderizar = true;
-                }
-                if (diffHoras <= 1 && diffHoras > 0.9 && !comp.alerta1h) {
-                    enviarAlertaManual(index, '1h');
-                    comp.alerta1h = true;
-                    precisaRenderizar = true;
-                }
-            });
-            
-            if (precisaRenderizar) {
-                localStorage.setItem('compromissos', JSON.stringify(compromissos));
-                renderizarLista();
-            }
-        }
+// ========== HISTÓRICO ==========
+function showHistory() {
+  const modal = document.getElementById('historyModal');
+  const historyDiv = document.getElementById('historyList');
+  
+  if(history.length === 0) {
+    historyDiv.innerHTML = '<div class="empty-state">📭 Nenhum registro</div>';
+  } else {
+    historyDiv.innerHTML = history.slice(0, 50).map(h => `
+      <div class="history-item">
+        <strong>💊 ${escapeHtml(h.med)}</strong><br>
+        📅 ${h.time}<br>
+        ${h.status}
+      </div>
+    `).join('');
+  }
+  modal.style.display = 'block';
+}
 
-        // Funções globais para botões
-        window.enviarAlertaManual = function(index, tipo) {
-            const comp = compromissos[index];
-            if (!comp) return;
-            
-            const mensagem = gerarMensagemWhatsApp(comp, tipo);
-            abrirWhatsApp(mensagem);
-        };
+function closeHistory() {
+  document.getElementById('historyModal').style.display = 'none';
+}
 
-        window.enviarDetalhes = function(index) {
-            const comp = compromissos[index];
-            if (!comp) return;
-            
-            const mensagem = gerarMensagemWhatsApp(comp, '');
-            abrirWhatsApp(mensagem);
-        };
+function clearHistory() {
+  if (!confirm('Limpar histórico?')) return;
+  history = [];
+  saveData();
+  showHistory();
+}
 
-        window.removerCompromisso = function(index) {
-            if (confirm('Remover este compromisso?')) {
-                compromissos.splice(index, 1);
-                localStorage.setItem('compromissos', JSON.stringify(compromissos));
-                renderizarLista();
-            }
-        };
+// ========== UTILIDADES ==========
+function loadData() {
+  const savedAlarms = localStorage.getItem('alarms_plus_v2');
+  const savedHistory = localStorage.getItem('history_plus_v2');
+  alarms = savedAlarms ? JSON.parse(savedAlarms) : [];
+  history = savedHistory ? JSON.parse(savedHistory) : [];
+}
 
-        // Adicionar novo compromisso
-        form.addEventListener('submit', (e) => {
-            e.preventDefault();
+function saveData() {
+  localStorage.setItem('alarms_plus_v2', JSON.stringify(alarms));
+  localStorage.setItem('history_plus_v2', JSON.stringify(history));
+}
 
-            const titulo = tituloInput.value.trim();
-            const descricao = descricaoInput.value.trim();
-            const data = dataInput.value;
-            const hora = horaInput.value;
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
 
-            if (!titulo || !data || !hora) {
-                alert('Por favor, preencha todos os campos obrigatórios.');
-                return;
-            }
+// ========== TESTE MANUAL ==========
+function testAlarm() {
+  triggerAlarm('TESTE - Hora do remédio');
+}
 
-            // Validar data futura
-            const dataHoraEscolhida = new Date(`${data}T${hora}`);
-            if (dataHoraEscolhida < new Date()) {
-                alert('A data/hora do compromisso deve ser futura.');
-                return;
-            }
+// Expor funções
+window.addAlarm = addAlarm;
+window.removeAlarm = removeAlarm;
+window.stopAlarm = stopAlarm;
+window.snoozeAlarm = snoozeAlarm;
+window.showHistory = showHistory;
+window.closeHistory = closeHistory;
+window.clearHistory = clearHistory;
+window.testAlarm = testAlarm;
 
-            const novoCompromisso = {
-                titulo,
-                descricao,
-                data,
-                hora,
-                whatsapp: WHATSAPP_FIXO,
-                alerta24h: false,
-                alerta2h: false,
-                alerta1h: false,
-                criado: new Date().toISOString()
-            };
+console.log('✅ App pronto! Use testAlarm() para testar');
+console.log('🎵 O som vai tocar mesmo com tela bloqueada!');
+</script>
 
-            compromissos.push(novoCompromisso);
-            localStorage.setItem('compromissos', JSON.stringify(compromissos));
-
-            // Limpar formulário
-            tituloInput.value = '';
-            descricaoInput.value = '';
-            dataInput.value = '';
-            horaInput.value = '';
-
-            renderizarLista();
-            
-            // Mostrar mensagem de sucesso
-            mostrarStatus('✅ Compromisso agendado com sucesso!');
-            
-            // Verificar se já existe alerta para este compromisso
-            setTimeout(() => verificarTodosAlertas(), 1000);
-        });
-
-        // Inicializar lista e verificar alertas
-        renderizarLista();
-        verificarTodosAlertas();
-
-        // Verificar alertas a cada 30 segundos
-        setInterval(verificarTodosAlertas, 30000);
-    </script>
 </body>
 </html>
